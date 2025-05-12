@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView } from 'react-native';
 import { router } from 'expo-router';
-import { Settings, Camera, Shield, Bell, HelpCircle, LogOut, ChevronRight } from 'lucide-react-native';
+import { Settings, Camera, Shield, Bell, CircleHelp as HelpCircle, LogOut, ChevronRight } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 export default function ProfileScreen() {
