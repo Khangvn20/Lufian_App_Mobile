@@ -1,8 +1,13 @@
 import { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Alert } from 'react-native';
 import { Link, router } from 'expo-router';
 import { Heart, Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { saveAuthData } from '../utils/auth'; // Giả sử bạn đã định nghĩa hàm này trong utils/auth.js
+// Định nghĩa API base URL
+const API_BASE_URL = 'http://10.0.2.2:3001/v1';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -12,7 +17,7 @@ export default function LoginScreen() {
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     // Reset errors
     setEmailError('');
     setPasswordError('');
@@ -35,12 +40,89 @@ export default function LoginScreen() {
     
     if (isValid) {
       setIsLoading(true);
-      
-      // Simulate API call
-      setTimeout(() => {
+      try {
+        // Log để debug
+        console.log('Attempting login with:', { email, password: '***' });
+        
+        const response = await axios.post(`${API_BASE_URL}/login`, {
+          email,
+          password
+        }, 
+        {
+          headers: {
+            "X-Device-Type": "app", 
+            "Content-Type": "application/json",
+          },
+        });
+        
+        // Log response để debug
+        console.log('Login response structure:', Object.keys(response.data));
+        
+        if (response.data && response.data.access_token) {
+          try {
+            console.log('Login successful, saving auth data');
+            
+            // Lưu dữ liệu xác thực sử dụng module auth
+            await saveAuthData(
+              response.data.access_token,
+              response.data.refresh_token,
+              response.data.user,
+              response.data.expires_in
+            );
+            
+            console.log('Auth data saved successfully');
+            
+            // Kiểm tra token đã lưu
+            const savedToken = await AsyncStorage.getItem('userToken');
+            console.log('Verified saved token exists:', !!savedToken);
+            
+            setIsLoading(false);
+            router.replace('/(tabs)');
+          } catch (storageError) {
+            console.error('Error saving auth data to AsyncStorage:', storageError);
+            Alert.alert(
+              'Storage Error',
+              'Failed to save login information. Please try again.',
+              [{ text: 'OK' }]
+            );
+            setIsLoading(false);
+          }
+        } else {
+          console.error('Invalid response format:', response.data);
+          Alert.alert(
+            'Login Error',
+            'Server returned an invalid response format. Please try again later.',
+            [{ text: 'OK' }]
+          );
+          setIsLoading(false);
+        }
+      } catch (error) {
         setIsLoading(false);
-        router.replace('/(tabs)');
-      }, 1500);
+        
+        if (axios.isAxiosError(error)) {
+          // Xử lý lỗi Axios
+          console.error('Login error:', error);
+          
+          if (error.response) {
+            console.error('Error data:', error.response.data);
+            console.error('Error status:', error.response.status);
+            
+            // Hiển thị thông báo lỗi cụ thể từ server
+            const errorMessage = error.response.data?.message || 'Login failed. Please check your credentials.';
+            Alert.alert('Login Error', errorMessage);
+          } else if (error.request) {
+            console.error('Network Error:', error.request);
+            Alert.alert('Network Error', 'Could not connect to the server. Please check your internet connection.');
+          } else {
+            console.error('Error:', error.message);
+            Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+          }
+        } else {
+          // Xử lý lỗi không phải Axios
+          console.error('Unexpected error:', error);
+          Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+        }
+      }
     }
   };
 

@@ -4,9 +4,11 @@ import { StyleSheet, View, Platform } from 'react-native';
 import { Heart, MessageCircle, Users, User } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
+
 export default function TabLayout() {
   const iconSize = 24;
   
+
   return (
     <Tabs
       screenOptions={{

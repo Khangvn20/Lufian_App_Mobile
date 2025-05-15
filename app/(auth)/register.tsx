@@ -3,10 +3,11 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Keyboa
 import { Link, router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Heart, Mail, Lock, Eye, EyeOff, User, ChevronLeft, Calendar, Users } from 'lucide-react-native';
-import { Picker } from '@react-native-picker/picker';
+import axios from 'axios';
+import moment from 'moment';
 
 export default function RegisterScreen() {
-  const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -16,6 +17,7 @@ export default function RegisterScreen() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showGenderPicker, setShowGenderPicker] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  
 
   // Error states
   const [nameError, setNameError] = useState('');
@@ -25,7 +27,7 @@ export default function RegisterScreen() {
   const [dobError, setDobError] = useState(''); // Lỗi cho ngày sinh
   const [genderError, setGenderError] = useState(''); // Lỗi cho giới tính
 
-  const handleRegister = () => {
+  const handleRegister = async () => {
     // Reset all errors
     setNameError('');
     setEmailError('');
@@ -37,8 +39,8 @@ export default function RegisterScreen() {
     // Validate inputs
     let isValid = true;
 
-    if (!name.trim()) {
-      setNameError('Name is required');
+    if (!username.trim()) {
+      setNameError('Username is required');
       isValid = false;
     }
 
@@ -79,15 +81,25 @@ export default function RegisterScreen() {
     if (isValid) {
       setIsLoading(true);
 
-      // Simulate API call
-      setTimeout(() => {
-        setIsLoading(false);
-        // Navigate to profile setup
-        router.push('/(tabs)');
-      }, 1500);
-    }
-  };
+      try {
+        const response = await axios.post('http://10.0.2.2:3001/v1/register',{  // Đổi URL theo backend của bạn
+          username, 
+          email,
+          password,
+          confirmPassword,
+          dateofbirth: moment(dob, 'DD/MM/YYYY').format('YYYY-MM-DD'), // Chuyển đổi định dạng ngày sinh  
+          gender,
+        });
 
+    
+        setIsLoading(false);
+        router.replace('/(auth)/login'); 
+      } catch (error: any) { 
+        setIsLoading(false);
+        console.error('Error during registration:', error.response?.data || error);
+      }
+    }
+};
   // Function to get gender display text
   const getGenderDisplayText = () => {
     switch(gender) {
@@ -122,10 +134,10 @@ export default function RegisterScreen() {
             <User size={20} color="#FF3366" style={styles.inputIcon} />
             <TextInput 
               style={styles.input} 
-              placeholder="Full Name" 
+              placeholder="Username" 
               placeholderTextColor="#9CA3AF" 
-              value={name} 
-              onChangeText={setName} 
+              value={username} 
+              onChangeText={setUsername} 
             />
           </View>
           {nameError ? <Text style={styles.errorText}>{nameError}</Text> : null}
@@ -181,7 +193,7 @@ export default function RegisterScreen() {
             <Calendar size={20} color="#FF3366" style={styles.inputIcon} />
             <TextInput
               style={styles.input}
-              placeholder="Date of Birth (MM/DD/YYYY)"
+              placeholder="Date of Birth (DD/MM/YYYY)"
               placeholderTextColor="#9CA3AF"
               value={dob}
               onChangeText={setDob}
